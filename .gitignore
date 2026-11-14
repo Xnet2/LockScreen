@@ -1,0 +1,9 @@
+# build output (the APK is published under Releases)
+*.apk
+build/
+.gradle/
+local.properties
+*.keystore
+*.jks
+.idea/
+*.iml

@@ -1,6 +1,8 @@
 <div dir="rtl">
 
-# 🔒 מסך נעילה
+<img src="icon.png" width="96" alt="אייקון" align="left">
+
+# מסך נעילה
 
 מסך נעילה חלופי לאנדרואיד: נקי, מודרני ומהיר, במקום מסך הנעילה של המערכת.
 הרקע הוא הרקע של דף הבית, השעון מעוצב, וגלילה ארוכה למעלה פותחת את אמצעי הנעילה שבחרת: קו ביטול נעילה, קוד PIN או סיסמה.
@@ -14,6 +16,13 @@
   <img src="Screenshot/Screenshot_20261115-000813.png" width="200" alt="התראות ואמצעי נעילה">
   <img src="Screenshot/Screenshot_20261115-000817.png" width="200" alt="הרשאות">
 </p>
+
+## 🎬 רילס
+
+<a href="reel/LockScreen-Reel.mp4"><img src="reel/cover.jpg" width="220" alt="רילס – לחצו לצפייה"></a>
+
+סרטון אנכי של 20 שניות (‎1080×1920) לאינסטגרם, טיקטוק ושורטס: [reel/LockScreen-Reel.mp4](reel/LockScreen-Reel.mp4).
+הסרטון מרונדר מקוד: `reel/make-reel.ps1` מצייר כל פריים ב-Java ומקודד אותו עם ffmpeg.
 
 ## מה יש בה
 

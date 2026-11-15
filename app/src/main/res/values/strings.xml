@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">מסך נעילה</string>
+    <string name="guard_label">מסך נעילה – הגנה מלאה</string>
+    <string name="guard_desc">כשהטלפון נעול: חוסם את מגש ההתראות וההגדרות המהירות, סוגר אפליקציות שנפתחות מעל מסך הנעילה ומאפשר בזמן שיחה רק את מסך השיחה. השירות לא קורא את תוכן המסך ולא אוסף מידע.</string>
 </resources>

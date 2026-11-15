@@ -339,8 +339,8 @@ public class LockScreenView extends FrameLayout {
         pendingIntent = g.intent;
         pendingKey = g.autoCancel ? g.latestKey : null;
         if (Security.type(getContext()) == LockType.NONE) {
+            onUnlock.run(); // unlock first, so the guard lets the opened app through
             launchPending();
-            onUnlock.run();
         } else {
             openUnlock(0f);
             if (panel != null && Security.lockoutRemainingMs(getContext()) <= 0) {
@@ -375,7 +375,7 @@ public class LockScreenView extends FrameLayout {
         Bitmap bmp = WallpaperLoader.load(getContext());
         if (bmp != null) {
             bgSharp.setImageBitmap(bmp);
-            bgBlur.setImageBitmap(WallpaperLoader.blurred(bmp));
+            bgBlur.setImageDrawable(null); // background is never blurred
         } else {
             bgSharp.setImageDrawable(WallpaperLoader.fallback());
             bgBlur.setImageDrawable(null);
@@ -405,8 +405,8 @@ public class LockScreenView extends FrameLayout {
     private void startChevron() {
         if (chevronAnim != null) chevronAnim.cancel();
         chevron.setTranslationY(0f);
-        chevronAnim = ObjectAnimator.ofFloat(chevron, View.TRANSLATION_Y, 0f, -dpf(6));
-        chevronAnim.setDuration(1100);
+        chevronAnim = ObjectAnimator.ofFloat(chevron, View.TRANSLATION_Y, 0f, -dpf(3));
+        chevronAnim.setDuration(1600);
         chevronAnim.setRepeatMode(ValueAnimator.REVERSE);
         chevronAnim.setRepeatCount(ValueAnimator.INFINITE);
         chevronAnim.setInterpolator(new PathInterpolator(0.45f, 0f, 0.55f, 1f));
@@ -419,36 +419,22 @@ public class LockScreenView extends FrameLayout {
         progress = p;
         float h = Math.max(1f, getHeight());
 
-        // Clock drifts up, shrinks a touch and fades — eased, so it starts gently.
-        float cOut = Ui.smooth(0.05f, 0.7f, p);
-        clock.setTranslationY(-h * 0.16f * p);
-        clock.setAlpha(1f - cOut);
-        float cs = 1f - 0.08f * p;
-        clock.setScaleX(cs);
-        clock.setScaleY(cs);
+        // Calm and simple: things only fade and drift a little. No blur, no zoom, no scaling.
+        clock.setTranslationY(-h * 0.08f * p);
+        clock.setAlpha(1f - Ui.smooth(0f, 0.6f, p));
 
         bottomLayer.setAlpha(1f - Ui.smooth(0f, 0.35f, p));
-        bottomLayer.setTranslationY(-h * 0.06f * p);
-        notifList.setAlpha(1f - Ui.smooth(0f, 0.5f, p));
-        notifList.setTranslationY(-h * 0.12f * p);
-        notifList.setVisibility(p < 0.6f ? VISIBLE : INVISIBLE);
+        bottomLayer.setTranslationY(-h * 0.03f * p);
+        notifList.setAlpha(1f - Ui.smooth(0f, 0.45f, p));
+        notifList.setTranslationY(-h * 0.05f * p);
+        notifList.setVisibility(p < 0.5f ? VISIBLE : INVISIBLE);
 
-        // Wallpaper zooms slightly and melts into the blurred copy.
-        float zoom = 1f + 0.07f * p;
-        bgSharp.setScaleX(zoom);
-        bgSharp.setScaleY(zoom);
-        bgBlur.setScaleX(zoom);
-        bgBlur.setScaleY(zoom);
-        bgBlur.setAlpha(Ui.smooth(0f, 0.85f, p));
-        scrim.setAlpha(0.08f + 0.38f * Ui.smooth(0f, 1f, p));
+        // The wallpaper stays sharp; it only darkens a bit so the unlock input is readable.
+        scrim.setAlpha(0.08f + 0.32f * Ui.smooth(0f, 1f, p));
 
-        // Unlock input rises in from below and scales up softly.
-        float u = Ui.smooth(0.4f, 1f, p);
+        float u = Ui.smooth(0.45f, 1f, p);
         unlockLayer.setAlpha(u);
-        unlockLayer.setTranslationY((1f - u) * dpf(90));
-        float us = 0.94f + 0.06f * u;
-        unlockLayer.setScaleX(us);
-        unlockLayer.setScaleY(us);
+        unlockLayer.setTranslationY((1f - u) * dpf(28));
         unlockLayer.setVisibility(p > 0.01f ? VISIBLE : INVISIBLE);
     }
 
@@ -461,7 +447,7 @@ public class LockScreenView extends FrameLayout {
     private void springTo(float target, float v, Runnable end) {
         stopSpring();
         springTarget = target;
-        springV = v;
+        springV = Ui.clamp(v, -3f, 3f); // a hard fling shouldn't make things jump
         springEnd = end;
         final long[] elapsed = {0};
         spring = new TimeAnimator();
@@ -469,8 +455,9 @@ public class LockScreenView extends FrameLayout {
             if (deltaMs <= 0) return;
             elapsed[0] += deltaMs;
             float dt = Math.min(deltaMs, 34) / 1000f;
-            final float stiffness = 190f;
-            final float damping = 2f * (float) Math.sqrt(stiffness) * 0.92f;
+            // Fully damped (no overshoot, no bounce) and unhurried.
+            final float stiffness = 120f;
+            final float damping = 2f * (float) Math.sqrt(stiffness) * 1.05f;
             float x = progress;
             int steps = 4;
             for (int i = 0; i < steps; i++) {
@@ -612,7 +599,7 @@ public class LockScreenView extends FrameLayout {
                 if (dragOrigin == STATE_CLOCK) {
                     boolean tap = Math.abs(ev.getRawY() - touchStartY) < dpf(8) && progress < 0.03f;
                     if (released && tap) {
-                        springTo(0f, 3f, null); // a soft "lift me" nudge
+                        springTo(0f, 0f, null);
                     } else if (released && (progress > 0.6f || (progress > 0.4f && projected > 0.8f))) {
                         // only a real, long swipe opens it; a short flick slides back
                         openUnlock(v);
@@ -692,19 +679,29 @@ public class LockScreenView extends FrameLayout {
             startLockoutTicker();
             return;
         }
-        if (Security.verify(c, secret)) {
-            Security.onSuccess(c);
-            p.hideKeyboard();
-            handler.removeCallbacksAndMessages(null);
-            launchPending();
-            onUnlock.run();
-            return;
-        }
-        Security.onFailure(c);
-        p.fail(p.type == LockType.PIN ? "קוד שגוי"
-                : p.type == LockType.PATTERN ? "קו שגוי, נסה שוב" : "סיסמה שגויה");
-        if (Security.lockoutRemainingMs(c) > 0) startLockoutTicker();
+        if (checking) return;
+        checking = true;
+        p.setBusy(true);
+        Security.verifyAsync(c, secret, ok -> {
+            checking = false;
+            if (panel != p || !isAttachedToWindow()) return;
+            if (ok) {
+                Security.onSuccess(c);
+                p.hideKeyboard();
+                handler.removeCallbacksAndMessages(null);
+                onUnlock.run(); // unlock first, so the guard lets the opened app through
+                launchPending();
+                return;
+            }
+            p.setBusy(false);
+            Security.onFailure(c);
+            p.fail(p.type == LockType.PIN ? "קוד שגוי"
+                    : p.type == LockType.PATTERN ? "קו שגוי, נסה שוב" : "סיסמה שגויה");
+            if (Security.lockoutRemainingMs(c) > 0) startLockoutTicker();
+        });
     }
+
+    private boolean checking;
 
     private void startLockoutTicker() {
         handler.removeCallbacks(lockoutTick);

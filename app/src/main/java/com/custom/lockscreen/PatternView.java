@@ -24,7 +24,7 @@ public class PatternView extends View {
 
     enum Mode { NORMAL, WRONG, CORRECT }
 
-    private static final long RING_MS = 300;
+    private static final long RING_MS = 120; // quick, quiet emphasis
 
     Consumer<List<Integer>> onComplete;
     boolean inputEnabled = true;
@@ -53,7 +53,7 @@ public class PatternView extends View {
         this.pal = pal;
         setLayoutDirection(LAYOUT_DIRECTION_LTR);
         dotR = Ui.dpf(ctx, 6.5f);      // normal, comfortable dot size
-        dotSelR = Ui.dpf(ctx, 6.5f); // dot keeps its size: only the ring appears
+        dotSelR = Ui.dpf(ctx, 8f);     // selected: just slightly larger
         ringR = Ui.dpf(ctx, 12.5f);    // small ring hugging the dot when it's selected
         ringPaint.setStyle(Paint.Style.STROKE);
         ringPaint.setStrokeWidth(Ui.dpf(ctx, 2f));
@@ -201,13 +201,11 @@ public class PatternView extends View {
             canvas.drawPath(path, linePaint);
         }
 
-        // Dots and rings
+        // Dots: a dragged dot is only gently emphasised (a touch bigger, fully opaque). No rings.
         for (int i = 0; i < 9; i++) {
             if (isSel[i]) {
                 float t = ringT(i, now);
                 if (t < 1f) animating = true;
-                ringPaint.setColor(Ui.withAlpha(color, (int) (a * t)));
-                canvas.drawCircle(cx[i], cy[i], dotR + (ringR - dotR) * t, ringPaint);
                 dotPaint.setColor(Ui.withAlpha(color, a));
                 canvas.drawCircle(cx[i], cy[i], dotR + (dotSelR - dotR) * t, dotPaint);
             } else {

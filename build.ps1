@@ -26,7 +26,7 @@ $SRC = "$OUT\src"
 # Manifest with package attribute (aapt2 needs it; Gradle uses `namespace` instead)
 $m = Get-Content "$SRC\AndroidManifest.xml" -Raw -Encoding UTF8
 $m = $m.Replace('<manifest xmlns:android="http://schemas.android.com/apk/res/android">',
-    '<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.custom.lockscreen" android:versionCode="6" android:versionName="1.5">')
+    '<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.custom.lockscreen" android:versionCode="7" android:versionName="1.6">')
 [IO.File]::WriteAllText("$OUT\AndroidManifest.xml", $m, (New-Object Text.UTF8Encoding $false))
 
 Write-Host '== aapt2'

@@ -177,6 +177,13 @@ public class CredentialPanel extends LinearLayout {
         if (pwd != null) pwd.setEnabled(b);
     }
 
+    /** Ignore input while the secret is being checked, without any visual change. */
+    void setBusy(boolean busy) {
+        if (pin != null) pin.setBusy(busy);
+        if (pattern != null) pattern.inputEnabled = !busy;
+        if (pwd != null) pwd.setEnabled(!busy);
+    }
+
     void focusInput() {
         if (pwd == null) return;
         pwd.requestFocus();

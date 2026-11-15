@@ -93,9 +93,9 @@ final class Ui {
     }
 
     static void shake(View v) {
-        float d = dpf(v.getContext(), 10f);
-        ObjectAnimator.ofFloat(v, View.TRANSLATION_X, 0f, d, -d, d * 0.7f, -d * 0.7f, d * 0.3f, -d * 0.3f, 0f)
-                .setDuration(420)
+        float d = dpf(v.getContext(), 5f); // a small, soft shake
+        ObjectAnimator.ofFloat(v, View.TRANSLATION_X, 0f, d, -d, d * 0.5f, -d * 0.5f, 0f)
+                .setDuration(320)
                 .start();
     }
 

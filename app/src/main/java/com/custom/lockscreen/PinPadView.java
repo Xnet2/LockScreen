@@ -129,6 +129,10 @@ public class PinPadView extends LinearLayout {
         postDelayed(this::clear, 650);
     }
 
+    void setBusy(boolean busy) {
+        for (View k : keys) k.setEnabled(!busy);
+    }
+
     void setInputEnabled(boolean b) {
         for (View k : keys) k.setEnabled(b);
         setAlpha(b ? 1f : 0.4f);

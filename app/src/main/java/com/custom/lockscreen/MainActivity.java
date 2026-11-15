@@ -49,6 +49,7 @@ public class MainActivity extends Activity {
         root.setPadding(dp(18), dp(28), dp(18), dp(32));
         scroll.addView(root);
         setContentView(scroll);
+        getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE);
         WindowInsetsController ic = getWindow().getInsetsController();
         if (ic != null) {
             int light = WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS
@@ -60,7 +61,27 @@ public class MainActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
+        if (needsVerify()) {
+            // Settings are protected by the same pattern / PIN / password as the lock.
+            root.removeAllViews();
+            if (!verifying) {
+                verifying = true;
+                startActivityForResult(new Intent(this, SetupActivity.class)
+                        .putExtra(SetupActivity.EXTRA_VERIFY, true), REQ_VERIFY);
+            }
+            return;
+        }
         render();
+    }
+
+    private static final int REQ_VERIFY = 11;
+    /** When the settings were last unlocked. Cleared whenever the phone locks. */
+    static long verifiedAt;
+    private boolean verifying;
+
+    private boolean needsVerify() {
+        if (Security.type(this) == LockType.NONE) return false;
+        return android.os.SystemClock.elapsedRealtime() - verifiedAt > 5 * 60_000L || verifiedAt == 0;
     }
 
     /** Re-render after a change without losing the scroll position. */
@@ -95,6 +116,25 @@ public class MainActivity extends Activity {
             p.topMargin = dp(10);
             c.addView(pill("נעל עכשיו לבדיקה", true, () -> LockService.lockNow(this)), p);
         }
+
+        // ---- security
+        c = card("אבטחה");
+        boolean guard = LockGuardService.isEnabled(this);
+        permRow(c, "הגנה מלאה (מומלץ מאוד)",
+                "חוסם את מגש ההתראות, את ההגדרות המהירות ואת תפריט הכיבוי כשהטלפון נעול, "
+                        + "וסוגר מיד כל אפליקציה שנפתחת מעל מסך הנעילה",
+                guard, this::openGuardSettings);
+        if (!guard) {
+            LinearLayout.LayoutParams wp = lp();
+            wp.topMargin = dp(4);
+            c.addView(text("בלי הגנה מלאה אפשר למשוך את מגש ההתראות מעל מסך הנעילה. "
+                    + "מפעילים בהגדרות ← נגישות ← \"מסך נעילה – הגנה מלאה\". "
+                    + "אם ההגדרה חסומה: פרטי האפליקציה ← ⋮ ← \"התרת הגדרות מוגבלות\".", 12.5f, Ui.L_SUB, 400), wp);
+        }
+        LinearLayout.LayoutParams sp = lp();
+        sp.topMargin = dp(8);
+        c.addView(text("✓ ההגדרות מוגנות בקוד שלך   ✓ מוסתר מצילומי מסך\n"
+                + "✓ הקוד שמור מוצפן (PBKDF2)   ✓ השהיה אחרי ניסיונות שגויים", 12.5f, Ui.L_SUB, 500), sp);
 
         // ---- clock design
         c = card("עיצוב השעון");
@@ -258,6 +298,11 @@ public class MainActivity extends Activity {
         parent.addView(phone, plp);
     }
 
+    private void openGuardSettings() {
+        Toast.makeText(this, "בחר \"מסך נעילה – הגנה מלאה\" והפעל", Toast.LENGTH_LONG).show();
+        startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS));
+    }
+
     private void openNotifAccess() {
         try {
             startActivity(new Intent(Settings.ACTION_NOTIFICATION_LISTENER_DETAIL_SETTINGS)
@@ -343,6 +388,15 @@ public class MainActivity extends Activity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == REQ_VERIFY) {
+            verifying = false;
+            if (resultCode == RESULT_OK) {
+                verifiedAt = android.os.SystemClock.elapsedRealtime();
+            } else {
+                finish(); // cancelled / wrong: no access to the settings
+            }
+            return;
+        }
         if (requestCode != REQ_PICK_IMAGE || resultCode != RESULT_OK || data == null || data.getData() == null) return;
         try (InputStream in = getContentResolver().openInputStream(data.getData());
              OutputStream out = new FileOutputStream(WallpaperLoader.customFile(this))) {

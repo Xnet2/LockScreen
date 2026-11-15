@@ -34,14 +34,13 @@ public class LockService extends Service {
     }
 
     private LockOverlay overlay;
-    private boolean inCall;
 
     private final BroadcastReceiver receiver = new BroadcastReceiver() {
         @Override public void onReceive(Context c, Intent i) {
             String a = i.getAction();
             if (Intent.ACTION_SCREEN_OFF.equals(a)) {
                 // During a call the proximity sensor turns the screen off; don't lock then.
-                if (!inCall) overlay.lock();
+                if (!overlay.isInCall()) overlay.lock();
             } else if (Intent.ACTION_SCREEN_ON.equals(a)) {
                 overlay.onScreenOn();
             } else if (TelephonyManager.ACTION_PHONE_STATE_CHANGED.equals(a)) {
@@ -55,7 +54,7 @@ public class LockService extends Service {
         super.onCreate();
         createChannel();
         startForeground(1, buildNotification());
-        overlay = new LockOverlay(this);
+        overlay = LockOverlay.get(this);
         IntentFilter f = new IntentFilter();
         f.addAction(Intent.ACTION_SCREEN_OFF);
         f.addAction(Intent.ACTION_SCREEN_ON);
@@ -77,11 +76,9 @@ public class LockService extends Service {
     private void onPhoneState(String state) {
         if (TelephonyManager.EXTRA_STATE_RINGING.equals(state)
                 || TelephonyManager.EXTRA_STATE_OFFHOOK.equals(state)) {
-            inCall = true;
-            overlay.suspend(); // let the dialer / incoming-call screen through
-        } else if (TelephonyManager.EXTRA_STATE_IDLE.equals(state) && inCall) {
-            inCall = false;
-            overlay.resume(); // re-lock if we were locked before the call
+            overlay.onCallStarted(); // let the dialer / incoming-call screen through
+        } else if (TelephonyManager.EXTRA_STATE_IDLE.equals(state)) {
+            overlay.onCallEnded(); // re-lock if we were locked before the call
         }
     }
 

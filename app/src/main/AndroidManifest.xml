@@ -8,6 +8,8 @@
     <uses-permission android:name="android.permission.READ_PHONE_STATE" />
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+    <!-- root build: the watchdog sees which app is in front (granted with root via appops) -->
+    <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" />
 
     <!-- lets the lock screen show each notification's app name and icon -->
     <queries>

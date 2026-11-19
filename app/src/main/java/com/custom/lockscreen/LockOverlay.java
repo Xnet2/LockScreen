@@ -44,6 +44,7 @@ final class LockOverlay {
         Prefs.setLocked(ctx, true);
         MainActivity.verifiedAt = 0; // settings need the code again after every lock
         if (suspended) return;
+        RootGuard.onLocked(ctx); // root build: block the shade + start the watchdog
         if (view != null) {
             view.reset();
             updateShield();
@@ -80,6 +81,7 @@ final class LockOverlay {
     void unlock() {
         Prefs.setLocked(ctx, false);
         removeShield();
+        RootGuard.onUnlocked(ctx);
         final LockScreenView v = view;
         if (v == null) return;
         view = null;
@@ -98,6 +100,7 @@ final class LockOverlay {
         inCall = true;
         suspended = true;
         removeShield();
+        RootGuard.onCall(ctx, true);
         if (view != null) remove(view);
         view = null;
     }
@@ -106,7 +109,8 @@ final class LockOverlay {
         if (!inCall) return;
         inCall = false;
         suspended = false;
-        if (Prefs.isLocked(ctx)) lock();
+        RootGuard.onCall(ctx, false);
+        if (Prefs.isLocked(ctx)) lock(); // re-lock if we were locked before the call
     }
 
     void onScreenOn() {
@@ -115,6 +119,7 @@ final class LockOverlay {
 
     void destroy() {
         removeShield();
+        RootGuard.onUnlocked(ctx); // never leave the shade disabled
         if (view != null) remove(view);
         view = null;
     }

@@ -119,11 +119,15 @@ public class MainActivity extends Activity {
 
         // ---- security
         c = card("אבטחה");
-        boolean guard = LockGuardService.isEnabled(this);
-        permRow(c, "הגנה מלאה (מומלץ מאוד)",
-                "חוסם את מגש ההתראות, את ההגדרות המהירות ואת תפריט הכיבוי כשהטלפון נעול, "
-                        + "וסוגר מיד כל אפליקציה שנפתחת מעל מסך הנעילה",
-                guard, this::openGuardSettings);
+        boolean guard = Flavor.ROOT || LockGuardService.isEnabled(this);
+        if (Flavor.ROOT) {
+            rootSection(c);
+        } else {
+            permRow(c, "הגנה מלאה (מומלץ מאוד)",
+                    "חוסם את מגש ההתראות, את ההגדרות המהירות ואת תפריט הכיבוי כשהטלפון נעול, "
+                            + "וסוגר מיד כל אפליקציה שנפתחת מעל מסך הנעילה",
+                    guard, this::openGuardSettings);
+        }
         if (!guard) {
             LinearLayout.LayoutParams wp = lp();
             wp.topMargin = dp(4);
@@ -317,6 +321,58 @@ public class MainActivity extends Activity {
         startActivity(new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:" + getPackageName())));
     }
 
+    /** Root build: root status, one-tap permissions, and the safe-mode switch. */
+    private void rootSection(LinearLayout c) {
+        Boolean ok = Root.available;
+        if (ok == null) {
+            row(c, "גישת רוט", "בודק… אשר את הבקשה בחלון של Magisk / KernelSU", null, null);
+            Root.check(r -> refresh());
+            return;
+        }
+        if (!ok) {
+            row(c, "גישת רוט", "לא נמצאה. אשר את האפליקציה במנהל הרוט ונסה שוב.",
+                    pill("בדוק שוב", true, () -> { Root.available = null; refresh(); }), null);
+            return;
+        }
+        row(c, "הגנה מלאה עם רוט", "פעילה · בלי שירות נגישות", checkIcon(), null);
+        LinearLayout.LayoutParams ip = lp();
+        ip.topMargin = dp(2);
+        c.addView(text("כשהטלפון נעול: מגש ההתראות וההגדרות המהירות מבוטלים ברמת המערכת, "
+                + "וכל אפליקציה שנפתחת מעל מסך הנעילה נסגרת מיד. בזמן שיחה רק מסך השיחה זמין.",
+                12.5f, Ui.L_SUB, 400), ip);
+        LinearLayout.LayoutParams gp = lp();
+        gp.topMargin = dp(10);
+        c.addView(pill("אשר את כל ההרשאות אוטומטית", false, () -> {
+            Toast.makeText(this, "מאשר הרשאות עם רוט…", Toast.LENGTH_SHORT).show();
+            RootGuard.grantEverything(this::refresh);
+        }), gp);
+
+        Switch safe = new Switch(this);
+        safe.setChecked(Prefs.blockSafeMode(this));
+        safe.setOnCheckedChangeListener((b, on) -> {
+            if (!on) {
+                Prefs.setBlockSafeMode(this, false);
+                RootGuard.applySafeMode(this);
+                return;
+            }
+            new android.app.AlertDialog.Builder(this)
+                    .setTitle("לחסום מצב בטוח?")
+                    .setMessage("מצב בטוח הוא הדרך היחידה לעקוף נעילה של אפליקציה, ולכן חסימה שלו מחזקת מאוד את האבטחה.\n\n"
+                            + "שים לב: הוא גם דרך החילוץ אם משהו משתבש. אחרי החסימה, יציאה מתקלה תהיה רק דרך ADB או מנהל הרוט.")
+                    .setPositiveButton("חסום", (d, w) -> {
+                        Prefs.setBlockSafeMode(this, true);
+                        RootGuard.applySafeMode(this);
+                        refresh();
+                    })
+                    .setNegativeButton("ביטול", (d, w) -> refresh())
+                    .setOnCancelListener(d -> refresh())
+                    .show();
+        });
+        LinearLayout.LayoutParams sp = lp();
+        sp.topMargin = dp(6);
+        row(c, "חסימת מצב בטוח", "אי אפשר יהיה לאתחל למצב בטוח כדי לעקוף את הנעילה", safe, null);
+    }
+
     private void toggle(boolean on) {
         if (on) {
             if (!Settings.canDrawOverlays(this)) {
@@ -331,7 +387,9 @@ public class MainActivity extends Activity {
             Prefs.setEnabled(this, false);
             Prefs.setLocked(this, false);
             LockService.stop(this);
+            RootGuard.clearShadeBlock();
         }
+        RootGuard.applySafeMode(this); // safe-mode block only while the lock is enabled
         root.post(this::refresh);
     }
 

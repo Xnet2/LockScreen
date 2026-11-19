@@ -40,6 +40,10 @@ final class Prefs {
     static String notifMode(Context c) { return get(c, "notif_mode", "show"); }
     static void setNotifMode(Context c, String v) { put(c, "notif_mode", v); }
 
+    /** Root build: disable booting into safe mode while the lock is on. Off unless the user turns it on. */
+    static boolean blockSafeMode(Context c) { return sp(c).getBoolean("block_safe_mode", false); }
+    static void setBlockSafeMode(Context c, boolean v) { sp(c).edit().putBoolean("block_safe_mode", v).apply(); }
+
     /** "system" (home-screen wallpaper) or "custom" (picked image) */
     static String bgMode(Context c) { return get(c, "bg_mode", "system"); }
     static void setBgMode(Context c, String v) { put(c, "bg_mode", v); }

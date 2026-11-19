@@ -61,6 +61,8 @@ public class LockService extends Service {
         f.addAction(TelephonyManager.ACTION_PHONE_STATE_CHANGED);
         registerReceiver(receiver, f);
         if (Prefs.isEnabled(this) && Prefs.isLocked(this)) overlay.lock();
+        else RootGuard.clearShadeBlock(); // fail-safe: never leave the shade disabled after a crash
+        RootGuard.applySafeMode(this);
     }
 
     @Override
